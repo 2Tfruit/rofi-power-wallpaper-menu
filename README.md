@@ -15,7 +15,6 @@ https://github.com/user-attachments/assets/7c740380-db34-4c85-98a3-034c2d4a6299
 | `feh` | official | Статичные обои |
 | `mpv` | official | Воспроизведение видео |
 | `ffmpeg` | official | Генерация превью из видео |
-| `nsxiv` | official | Просмотрщик изображений |
 | `xorg-xprop` | official | Сброс свойств обоев |
 | `xwinwrap-git` | AUR | Отображение видео на рабочем столе |
 
