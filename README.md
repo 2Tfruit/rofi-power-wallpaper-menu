@@ -1,7 +1,7 @@
 # 🌸 Rofi меню для BSPWM написанный ИИ
 
 
-https://github.com/user-attachments/assets/7c740380-db34-4c85-98a3-034c2d4a6299
+https://github.com/user-attachments/assets/0dc5bc5a-827e-45ce-8836-aecbe25344e4
 
 
 Набор меню на основе rofi для BSPWM на Arch Linux с розовой цветовой схемой.
