@@ -1,0 +1,54 @@
+* {
+  font: "Sjz 18";
+  background-color: #2e1530;
+  text-color: #f0a0c0;
+}
+
+window {
+  width: 300px;
+  location: center;
+  anchor: center;
+  y-offset: 0;
+  x-offset: 0;
+  background-color: #1e1020;
+  border: 2px;
+  border-color: #f065a0;
+  border-radius: 15px;
+}
+
+inputbar {
+  background-color: #2e1530;
+  text-color: #f0a0c0;
+  padding: 8px;
+  border-radius: 10px;
+  enabled: true;
+}
+
+listview {
+  lines: 4;
+  fixed-height: false;
+  background-color: #1e1020;
+}
+
+element {
+  orientation: horizontal;
+  padding: 10px;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+element selected.normal {
+  background-color: #f065a0;
+  text-color: #1e1020;
+  border-radius: 8px;
+}
+
+element-text {
+  vertical-align: 0.5;
+  text-color: inherit;
+  background-color: transparent;
+}
+
+entry {
+  enabled: false;
+}
