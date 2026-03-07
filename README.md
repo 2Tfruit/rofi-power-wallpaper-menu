@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/7c740380-db34-4c85-98a3-034c2d4a6299
 ```bash
 sudo pacman -S rofi feh mpv ffmpeg xorg-xprop
 ```
-#### Из AUR
+##### Из AUR
 ```bash
 yay -S xwinwrap-git
 ```
