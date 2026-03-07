@@ -62,7 +62,7 @@ mkdir -p ~/Wallpaper/live
 ```
 
 3. Положи статичные обои в `~/Wallpaper/`, живые в `~/Wallpaper/live/`
-
+4. Скачай шрифт или замени на свой в файле *.rasi (2 строка)
 ### Запуск
 ```bash
 ~/.config/rofi/wallpaper.sh
