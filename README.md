@@ -8,32 +8,42 @@ https://github.com/user-attachments/assets/0dc5bc5a-827e-45ce-8836-aecbe25344e4
 
 ## 📦 Зависимости
 
+### 🖼️ wallpaper.sh
 
 | Пакет | Источник | Описание |
 |---|---|---|
-| `rofi` | official | Лаунчер меню |
+| `rofi` | official | Меню выбора |
 | `feh` | official | Статичные обои |
 | `mpv` | official | Воспроизведение видео |
-| `ffmpeg` | official | Генерация превью из видео |
-| `xorg-xprop` | official | Сброс свойств обоев |
-| `xwinwrap-git` | AUR | Отображение видео на рабочем столе |
-
-| Шрифт | Описание | Ссылка на шрифт |
-|---|---|---|
-| `Sjz` | Шрифт для меню | https://fonts-online.ru/fonts/sjz |
-
-так же шрифт будет в файлах!
-либо поменяйте на свой в файлaх *.rosi (2 строка)
-### Установка зависимостей
-##### Из официальных репозиториев
+| `ffmpeg` | official | Генерация превью |
+| `xorg-xprop` | official | Сброс свойств фона |
+| `xwinwrap-git` | AUR | Вывод видео на рабочий стол |
 ```bash
 sudo pacman -S rofi feh mpv ffmpeg xorg-xprop
-```
-##### Из AUR
-```bash
 yay -S xwinwrap-git
 ```
----
+
+### ⚡ power.sh
+
+| Пакет | Источник | Описание |
+|---|---|---|
+| `rofi` | official | Меню выбора |
+| `systemd` | official | Управление питанием |
+```bash
+sudo pacman -S rofi
+```
+
+### 📶 wifi.sh
+
+| Пакет | Источник | Описание |
+|---|---|---|
+| `rofi` | official | Меню выбора |
+| `networkmanager` | official | Управление сетями |
+| `libnotify` | official | Отправка уведомлений |
+| `dunst` | official | Демон уведомлений |
+```bash
+sudo pacman -S rofi networkmanager libnotify dunst
+```
 
 ## 🖼️ Меню обоев
 
