@@ -48,6 +48,7 @@ sudo pacman -S rofi
 ```bash
 sudo pacman -S rofi networkmanager libnotify dunst
 ```
+Для плавного открытия у меня picom
 
 ## 🖼️ Меню обоев
 
