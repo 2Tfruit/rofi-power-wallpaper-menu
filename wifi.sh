@@ -64,18 +64,40 @@ else
   NO="No"
 fi
 
+# Обёртка для rofi
+rofi_menu() {
+  rofi -dmenu -theme "$THEME" "$@"
+}
+
+# Уведомление с заменой предыдущего
+wifi_notify() {
+  dunstify -r 9999 "WiFi" "$1"
+}
+
+# Обычное уведомление
+wifi_notify_plain() {
+  notify-send "WiFi" "$1" -t 10000
+}
+
+# Перезапуск dunst
+restart_dunst() {
+  pkill -x dunst && dunst &
+}
+
+# Подтверждение действия
+confirm() {
+  local PROMPT_TEXT="$1"
+  ANSWER=$(echo -e "$YES\n$NO" | rofi_menu -p "$PROMPT_TEXT?" -u 1)
+  [ "$ANSWER" = "$YES" ]
+}
+
 get_signal_icon() {
   local SIGNAL=$1
-  if [ "$SIGNAL" -ge 80 ]; then
-    echo "󰤨 "
-  elif [ "$SIGNAL" -ge 60 ]; then
-    echo "󰤥 "
-  elif [ "$SIGNAL" -ge 40 ]; then
-    echo "󰤢 "
-  elif [ "$SIGNAL" -ge 20 ]; then
-    echo "󰤟 "
-  else
-    echo "󰤯 "
+  if [ "$SIGNAL" -ge 80 ]; then echo "󰤨 "
+  elif [ "$SIGNAL" -ge 60 ]; then echo "󰤥 "
+  elif [ "$SIGNAL" -ge 40 ]; then echo "󰤢 "
+  elif [ "$SIGNAL" -ge 20 ]; then echo "󰤟 "
+  else echo "󰤯 "
   fi
 }
 
@@ -91,15 +113,29 @@ get_iface() {
   nmcli -t -f DEVICE,TYPE device | grep ':wifi$' | head -1 | cut -d: -f1
 }
 
+connect_to_network() {
+  local SSID="$1"
+  local PASS="$2"
+
+  wifi_notify "$CONNECTING $SSID..."
+  if nmcli device wifi connect "$SSID" password "$PASS" 2>/dev/null; then
+    wifi_notify "$CONNECTED_OK $SSID"
+  else
+    nmcli connection delete "$SSID" 2>/dev/null
+    wifi_notify "$CONNECTED_FAIL $SSID"
+    main_menu
+  fi
+}
+
 show_current() {
   CONN=$(current_connection)
   if [ -z "$CONN" ]; then
-    echo "$NO_CONNECTION" | rofi -dmenu -theme "$THEME" -p "  $CURRENT"
+    echo "$NO_CONNECTION" | rofi_menu -p "  $CURRENT"
     main_menu
     return
   fi
 
-  notify-send "WiFi" "$LOADING_CURRENT" -t 10000
+  wifi_notify_plain "$LOADING_CURRENT"
 
   IFACE=$(get_iface)
   SIGNAL=$(nmcli -t -f IN-USE,SIGNAL device wifi list | grep '^\*' | cut -d: -f2)
@@ -109,16 +145,15 @@ show_current() {
   GW=$(nmcli -t -f IP4.GATEWAY device show "$IFACE" | head -1 | cut -d: -f2)
   DNS=$(nmcli -t -f IP4.DNS device show "$IFACE" | head -1 | cut -d: -f2)
 
-  pkill -x dunst && dunst &
+  restart_dunst
 
-  ACTION=$(echo -e "$ICON $CONN\n $SIGNAL%\n IPv4: $IP4\n IPv6: $IP6\n  $GW\n DNS: $DNS\n $FORGET" | rofi -dmenu -theme "$THEME" -p "  $CURRENT" -u 6)
+  ACTION=$(echo -e "$ICON $CONN\n $SIGNAL%\n IPv4: $IP4\n IPv6: $IP6\n  $GW\n DNS: $DNS\n $FORGET" | rofi_menu -p "  $CURRENT" -u 6)
   case "$ACTION" in
     " $FORGET")
-      CONFIRM=$(echo -e "$YES\n$NO" | rofi -dmenu -theme "$THEME" -p "$FORGET?" -u 1)
-      if [ "$CONFIRM" = "$YES" ]; then
+      if confirm " $FORGET"; then
         nmcli device disconnect "$IFACE" 2>/dev/null
         nmcli connection delete "$CONN" 2>/dev/null
-        notify-send "WiFi" "$FORGOTTEN: $CONN" -t 10000
+        wifi_notify_plain "$FORGOTTEN: $CONN"
       else
         show_current
       fi
@@ -129,10 +164,7 @@ show_current() {
 }
 
 show_networks() {
-  notify-send "WiFi" "$LOADING" -t 10000
-
-  TMPFILE=$(mktemp)
-  nmcli -t -f SSID,SIGNAL,SECURITY,FREQ device wifi list > "$TMPFILE"
+  wifi_notify_plain "$LOADING"
 
   ACTIVE=$(current_connection)
   NETWORKS_ACTIVE=""
@@ -147,12 +179,7 @@ show_networks() {
     [ -z "$SSID" ] && continue
 
     ICON=$(get_signal_icon "$SIGNAL")
-
-    if [ "$FREQ" -ge 5000 ] 2>/dev/null; then
-      BAND="5GHz"
-    else
-      BAND="2.4GHz"
-    fi
+    BAND=$([ "$FREQ" -ge 5000 ] 2>/dev/null && echo "5GHz" || echo "2.4GHz")
 
     if echo "$SECURITY" | grep -q "WPA"; then
       SEC="WPA"
@@ -162,74 +189,49 @@ show_networks() {
       SEC="$SECURITY"
     fi
 
+    LINE_OUT="$ICON $SSID | $SIGNAL% | $BAND | $SEC"
+
     if [ "$SSID" = "$ACTIVE" ]; then
-      NETWORKS_ACTIVE="$ICON $SSID | $SIGNAL% | $BAND | $SEC  ✓"
+      NETWORKS_ACTIVE="$LINE_OUT  ✓"
+    elif [ -z "$NETWORKS_OTHER" ]; then
+      NETWORKS_OTHER="$LINE_OUT"
     else
-      if [ -z "$NETWORKS_OTHER" ]; then
-        NETWORKS_OTHER="$ICON $SSID | $SIGNAL% | $BAND | $SEC"
-      else
-        NETWORKS_OTHER="$NETWORKS_OTHER
-$ICON $SSID | $SIGNAL% | $BAND | $SEC"
-      fi
+      NETWORKS_OTHER="$NETWORKS_OTHER
+$LINE_OUT"
     fi
-  done < "$TMPFILE"
+  done < <(nmcli -t -f SSID,SIGNAL,SECURITY,FREQ device wifi list)
 
-  rm "$TMPFILE"
+  NETWORKS="${NETWORKS_ACTIVE:+$NETWORKS_ACTIVE${NETWORKS_OTHER:+
+}}$NETWORKS_OTHER"
 
-  if [ -n "$NETWORKS_ACTIVE" ]; then
-    NETWORKS="$NETWORKS_ACTIVE
-$NETWORKS_OTHER"
-  else
-    NETWORKS="$NETWORKS_OTHER"
-  fi
+  restart_dunst
 
-  pkill -x dunst && dunst &
-
-  CHOSEN=$(echo "$NETWORKS" | rofi -dmenu -theme "$THEME" -p "  $PROMPT_NETWORKS")
+  CHOSEN=$(echo "$NETWORKS" | rofi_menu -p "  $PROMPT_NETWORKS")
   [ -z "$CHOSEN" ] && main_menu && return
 
   SSID=$(echo "$CHOSEN" | sed 's/ |.*//' | awk '{print $2}')
-
   SAVED=$(nmcli -t -f NAME connection show | grep -Fx "$SSID")
 
   if [ -n "$SAVED" ]; then
-    dunstify -r 9999 "WiFi" "$CONNECTING $SSID..."
+    wifi_notify "$CONNECTING $SSID..."
     if nmcli connection up "$SSID" 2>/dev/null; then
-      dunstify -r 9999 "WiFi" "$CONNECTED_OK $SSID"
-    else
-      nmcli connection delete "$SSID" 2>/dev/null
-      PASS=$(rofi -dmenu -theme "$THEME" -p "  $ENTER_PASS" -theme-str 'entry { enabled: true; visibility: false; }')
-      [ -z "$PASS" ] && main_menu && return
-      dunstify -r 9999 "WiFi" "$CONNECTING $SSID..."
-      if nmcli device wifi connect "$SSID" password "$PASS" 2>/dev/null; then
-        dunstify -r 9999 "WiFi" "$CONNECTED_OK $SSID"
-      else
-        nmcli connection delete "$SSID" 2>/dev/null
-        dunstify -r 9999 "WiFi" "$CONNECTED_FAIL $SSID"
-        main_menu
-      fi
+      wifi_notify "$CONNECTED_OK $SSID"
+      return
     fi
-  else
-    PASS=$(rofi -dmenu -theme "$THEME" -p "  $ENTER_PASS" -theme-str 'entry { enabled: true; visibility: false; }')
-    [ -z "$PASS" ] && main_menu && return
-    dunstify -r 9999 "WiFi" "$CONNECTING $SSID..."
-    if nmcli device wifi connect "$SSID" password "$PASS" 2>/dev/null; then
-      dunstify -r 9999 "WiFi" "$CONNECTED_OK $SSID"
-    else
-      nmcli connection delete "$SSID" 2>/dev/null
-      dunstify -r 9999 "WiFi" "$CONNECTED_FAIL $SSID"
-      main_menu
-    fi
+    nmcli connection delete "$SSID" 2>/dev/null
   fi
+
+  PASS=$(rofi_menu -p "  $ENTER_PASS" -theme-str 'entry { enabled: true; visibility: false; }')
+  [ -z "$PASS" ] && main_menu && return
+  connect_to_network "$SSID" "$PASS"
 }
 
 confirm_disconnect() {
-  CONFIRM=$(echo -e "$YES\n$NO" | rofi -dmenu -theme "$THEME" -p "$DISCONNECT?" -u 1)
-  if [ "$CONFIRM" = "$YES" ]; then
+  if confirm " $DISCONNECT"; then
     CONN=$(current_connection)
     IFACE=$(get_iface)
     nmcli device disconnect "$IFACE" 2>/dev/null
-    notify-send "WiFi" "$DISCONNECTED $CONN" -t 10000
+    wifi_notify_plain "$DISCONNECTED $CONN"
   else
     main_menu
   fi
@@ -237,28 +239,21 @@ confirm_disconnect() {
 
 main_menu() {
   STATUS=$(wifi_status)
-  if [ "$STATUS" = "enabled" ]; then
-    TOGGLE=" $TOGGLE_OFF"
-  else
-    TOGGLE=" $TOGGLE_ON"
-  fi
+  TOGGLE=$([ "$STATUS" = "enabled" ] && echo " $TOGGLE_OFF" || echo " $TOGGLE_ON")
   CONN=$(current_connection)
-  if [ -n "$CONN" ]; then
-    CURRENT_LABEL=" $CURRENT: $CONN"
-  else
-    CURRENT_LABEL=" $CURRENT: $NO_CONNECTION"
-  fi
-  CHOSEN=$(echo -e "$CURRENT_LABEL\n $SCAN\n $DISCONNECT\n$TOGGLE\n $EXIT" | rofi -dmenu -theme "$THEME" -p "  $PROMPT" -u 4)
+  CURRENT_LABEL=$([ -n "$CONN" ] && echo " $CURRENT: $CONN" || echo " $CURRENT: $NO_CONNECTION")
+
+  CHOSEN=$(echo -e "$CURRENT_LABEL\n $SCAN\n $DISCONNECT\n$TOGGLE\n $EXIT" | rofi_menu -p "  $PROMPT" -u 4)
   case "$CHOSEN" in
     " $SCAN") show_networks ;;
     " $DISCONNECT") confirm_disconnect ;;
     " $TOGGLE_OFF"|" $TOGGLE_ON")
       if [ "$STATUS" = "enabled" ]; then
         nmcli radio wifi off
-        notify-send "WiFi" "$WIFI_OFF" -t 10000
+        wifi_notify_plain "$WIFI_OFF"
       else
         nmcli radio wifi on
-        notify-send "WiFi" "$WIFI_ON" -t 10000
+        wifi_notify_plain "$WIFI_ON"
       fi
       main_menu
       ;;
