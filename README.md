@@ -48,6 +48,10 @@ sudo pacman -S rofi
 ```bash
 sudo pacman -S rofi networkmanager libnotify dunst
 ```
+### Шрифт для всех пакетов
+| Шрифт | Источник |
+|---|---|
+| `sjz` | https://fonts-online.ru/fonts/sjz или в репозитории |
 Для плавного открытия у меня picom
 
 ## 🖼️ Меню обоев
